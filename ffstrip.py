@@ -134,4 +134,4 @@ if __name__ == "__main__":
 
     args = parser.parse_args()
     main(args.input, args.output, strip=args.strip, keep=args.keep,
-         info=args.info, interactive=args.interactive)
+         info=args.info)
