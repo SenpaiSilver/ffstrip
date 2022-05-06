@@ -36,7 +36,7 @@ def get_info(fin):
 
 
 def write_file(fin, fout, to_remove):
-    args = ["ffmpeg", "-i", fin, "-c", "copy", "-map", "0"]
+    args = ["ffmpeg", "-i", fin, "-c", "copy", "-map", "0", "-y"]
     for x in to_remove:
         args.append("-map")
         args.append(f"-0:{x}")
@@ -75,6 +75,10 @@ def main(fin, fout, strip=[], keep=[], info=False, interactive=False):
             title = tags.get("title")
             print(f"{track['index']} {track['codec_type']}: "
                   f"{title}/{language}")
+
+    if not fout and (strip or keep):
+        print("Missing output")
+        return
 
     if strip and keep:
         print("Can only strip or keep, not both")
@@ -116,7 +120,7 @@ def main(fin, fout, strip=[], keep=[], info=False, interactive=False):
                 named_tracks.extend(get_track_number_by_pattern(
                     track[1], metadata, ("subtitle",)))
         track_to_strip = set()
-        track_to_strip.update(*digit_tracks)
+        track_to_strip.update(digit_tracks)
         track_to_strip.update(filter(lambda x: x, named_tracks))
         write_file(fin, fout, digit_tracks + named_tracks)
 
@@ -125,7 +129,7 @@ if __name__ == "__main__":
     parser = ArgumentParser(
         description="Strip or keep the selected tracks from files")
     parser.add_argument("input", action="store")
-    parser.add_argument("--output", "-o", action="store", required=True)
+    parser.add_argument("--output", "-o", action="store")
     parser.add_argument("--strip", "-s", action="store",
                         nargs="+", required=False)
     parser.add_argument("--keep", "-k", action="store",
