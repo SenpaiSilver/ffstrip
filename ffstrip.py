@@ -7,16 +7,21 @@ from argparse import ArgumentParser
 
 class SelectableTrack:
     def __init__(self, track):
+        self.raw = track
         self.track = track.get("index")
         self.tags = track.get("tags", {})
         self.language = self.tags.get("language")
         self.title = self.tags.get("title")
         self.track_type = track.get('codec_type')
+        self.forced = track.get('disposition', {}).get('forced', 1) == 1
+        self.dub = track.get('disposition', {}).get('dub', 1) == 1
         self.selected = False
 
     def __repr__(self):
         metadata = f"{self.language or ''}:{self.title or ''}".strip(":")
         metadata = f"{self.index} {self.track_type} {metadata}"
+        if self.forced:
+            metadata += " forced"
         if self.selected is None:
             return f"<{__class__} {metadata}>"
         if self.selected:
@@ -36,7 +41,8 @@ def get_info(fin):
 
 
 def write_file(fin, fout, to_remove):
-    args = ["ffmpeg", "-i", fin, "-c", "copy", "-map", "0", "-y"]
+    args = ["ffmpeg", "-i", fin, "-c", "copy", "-map", "0", "-y",
+            "-v", "error"]
     for x in to_remove:
         args.append("-map")
         args.append(f"-0:{x}")
@@ -53,8 +59,9 @@ def get_track_number_by_pattern(pattern, metadata, codec_type=None):
     if not codec_type:
         codec_type = ("subtitle", "audio")
     for meta in [x for x in metadata if x["codec_type"] in codec_type]:
-        for candidate in (meta["tags"].get("language", "").lower(),
-                          meta["tags"].get("title", "").lower()):
+        for candidate in (meta.get("tags", {}).get("language", "").lower(),
+                          meta.get("tags", {}).get("title", "").lower(),
+                          "forced" if meta["disposition"].get("forced", 1) else ""):
             if pattern.lower() in candidate:
                 yield meta["index"]
 
@@ -74,7 +81,10 @@ def main(fin, fout, strip=[], keep=[], info=False, interactive=False):
             language = tags.get("language")
             title = tags.get("title")
             print(f"{track['index']} {track['codec_type']}: "
-                  f"{title}/{language}")
+                  f"{title}/{language}", end="")
+            if track["disposition"]["forced"] == 1:
+                print(" forced", end="")
+            print()
 
     if not fout and (strip or keep):
         print("Missing output")
