@@ -1,0 +1,5 @@
+[tool.black]
+line-length = 79
+target-version = ['py39']
+[project]
+name = "ffstrip"
